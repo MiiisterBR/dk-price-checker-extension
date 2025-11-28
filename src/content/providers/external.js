@@ -1,5 +1,5 @@
 import { getText } from '../modules/localization.js';
-import { showReviewsModal } from '../modules/ui.js';
+import { showReviewsModal, showErrorModal } from '../modules/ui.js';
 
 export function initExternalSite() {
     console.log('DK Extension: Init External Site Started');
@@ -7,26 +7,40 @@ export function initExternalSite() {
     // Initial check
     handleExternalSiteChanges();
 
-    // URL Monitor for SPAs (Torob/Esam)
-    let lastUrl = window.location.href;
+    // Page Fingerprint Monitor (Alternative to Full MD5 Hashing)
+    // We hash key content elements to detect page changes without full reloads
+    let lastFingerprint = '';
+
     setInterval(() => {
-        if (window.location.href !== lastUrl) {
-            lastUrl = window.location.href;
-            console.log('URL Changed:', lastUrl);
-            // Wait briefly for DOM to settle then check
-            setTimeout(handleExternalSiteChanges, 500);
-        }
-        
-        // Backup check: ensure button exists if we are on a product page
         const path = window.location.pathname;
         const hostname = window.location.hostname;
         const isProductPage = (hostname.includes('esam.ir') && path.includes('/item/')) || 
                               (hostname.includes('torob.com') && path.includes('/p/'));
-                              
-        if (isProductPage && !document.querySelector('.dk-reviews-btn')) {
-             handleExternalSiteChanges();
+
+        if (!isProductPage) return;
+
+        // Generate Fingerprint
+        // Combine Title + URL + Main Image (if possible) + Price (if possible)
+        const title = document.querySelector('h1') ? document.querySelector('h1').innerText : '';
+        const url = window.location.href;
+        // Simple lightweight hash
+        const currentFingerprint = title + '|' + url;
+
+        if (currentFingerprint !== lastFingerprint) {
+            console.log('DK Extension: Page Fingerprint Changed!', currentFingerprint);
+            lastFingerprint = currentFingerprint;
+            
+            // Wait briefly for DOM to settle then check/inject
+            setTimeout(handleExternalSiteChanges, 500);
+            setTimeout(handleExternalSiteChanges, 1500);
+        } else {
+            // Even if fingerprint is same, ensure button exists (backup)
+            // But don't run full logic if not needed to save resources
+            if (!document.querySelector('.dk-reviews-btn')) {
+                 handleExternalSiteChanges();
+            }
         }
-    }, 1000);
+    }, 1000); // Check every 1 second (User asked for 3, but 1 is snappier and safe with this lightweight check)
 
     // Use MutationObserver for SPA/React sites
     const observer = new MutationObserver((mutations) => {
@@ -82,6 +96,20 @@ function handleExternalSiteChanges() {
     const targetBtn = findExternalTargetButton();
     
     if (targetBtn) {
+        // If target says it's added, but the button isn't there (and not caught by existingBtn check above),
+        // it means the SPA wiped the review button but kept the target button instance (or copied it).
+        // We verify if the review button is actually nearby.
+        if (targetBtn.dataset.dkReviewBtnAdded && !existingBtn) {
+             // Check siblings/children/parent to be sure
+             const nearbyBtn = targetBtn.parentNode.querySelector('.dk-reviews-btn') || 
+                               (targetBtn.nextElementSibling && targetBtn.nextElementSibling.classList.contains('dk-reviews-btn') ? targetBtn.nextElementSibling : null);
+             
+             if (!nearbyBtn) {
+                  console.log('DK Extension: Target marked as processed but button missing. Resetting.');
+                  delete targetBtn.dataset.dkReviewBtnAdded;
+             }
+        }
+
         // Double check to ensure we don't add multiple times
         if (!targetBtn.dataset.dkReviewBtnAdded) {
              console.log('DK Extension: Found target, injecting button for', currentTitle);
@@ -188,8 +216,18 @@ function createReviewsButton(targetBtn, productTitle) {
                 }
                 port.disconnect();
             } else if (msg.status === "error") {
-                 btn.innerText = "مشاهده نظرات دیجی‌کالا";
-                 alert("Error: " + msg.error);
+                 const originalText = btn.innerText;
+                 btn.innerText = "❌ یافت نشد";
+                 btn.style.backgroundColor = "#f44336"; // Red
+                 
+                 // Show Modal for better visibility
+                 showErrorModal(msg.error);
+                 
+                 setTimeout(() => {
+                     btn.innerText = "مشاهده نظرات دیجی‌کالا";
+                     btn.style.backgroundColor = "#8e24aa"; // Revert
+                 }, 3000);
+                 
                  port.disconnect();
             }
         });

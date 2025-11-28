@@ -36,7 +36,145 @@
   font-family: 'Vazirmatn', sans-serif !important;
 }
 
-/* Golden Rotating Border */
+/* Reviews Modal Styles */
+.dk-reviews-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999; /* High z-index */
+}
+
+.dk-reviews-modal {
+  background: white;
+  width: 600px;
+  max-width: 90%;
+  max-height: 80vh;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  direction: rtl;
+  font-family: 'Vazirmatn', sans-serif !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.dk-reviews-header {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f0f0f1;
+}
+
+.dk-reviews-product-info {
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dk-reviews-product-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  background: white;
+  border-radius: 4px;
+}
+
+.dk-reviews-product-title {
+  text-decoration: none;
+  color: #333;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
+}
+
+.dk-close-reviews {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+}
+
+.dk-reviews-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dk-reviews-empty {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.dk-review-item {
+    border-bottom: 1px solid #eee;
+    padding: 12px 0;
+}
+
+.dk-review-meta {
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 8px; 
+    font-size: 12px; 
+    color: #888;
+}
+
+.dk-review-body {
+    margin-bottom: 8px; 
+    font-size: 14px; 
+    line-height: 1.6;
+}
+
+.dk-review-rate {
+    display: inline-block;
+    color: white; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    font-size: 12px;
+}
+
+.dk-rate-high { background: #4caf50; }
+.dk-rate-mid { background: #ff9800; }
+.dk-rate-low { background: #f44336; }
+
+/* Dark Mode for Reviews Modal */
+@media (prefers-color-scheme: dark) {
+    .dk-reviews-modal {
+        background-color: #1e1e1e;
+        color: #fff;
+    }
+    .dk-reviews-header {
+        background-color: #2d2d2d;
+        border-bottom-color: #444;
+    }
+    .dk-reviews-product-title {
+        color: #f0f0f0;
+    }
+    .dk-close-reviews {
+        color: #ccc;
+    }
+    .dk-reviews-empty {
+        color: #aaa;
+    }
+    .dk-review-item {
+        border-bottom-color: #444;
+    }
+    .dk-review-meta {
+        color: #aaa;
+    }
+}
 .dk-price-checker-btn, .dk-reviews-btn {
   /* Ensure container clips the overflowing spinner */
   overflow: hidden;

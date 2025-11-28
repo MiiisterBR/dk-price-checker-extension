@@ -78,3 +78,36 @@ export function showReviewsModal(reviews, product) {
     overlay.querySelector('.dk-close-reviews').onclick = () => overlay.remove();
     overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
 }
+
+export function showErrorModal(message) {
+    const existing = document.querySelector('.dk-reviews-modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'dk-reviews-modal-overlay';
+    
+    const modal = document.createElement('div');
+    modal.className = 'dk-reviews-modal';
+    modal.style.maxWidth = '400px'; // Smaller for errors
+    
+    // Header
+    const header = document.createElement('div');
+    header.className = 'dk-reviews-header';
+    header.innerHTML = `
+        <div style="color:#f44336; font-weight:bold;">خطا</div>
+        <button class="dk-close-reviews">&times;</button>
+    `;
+    
+    // Content
+    const content = document.createElement('div');
+    content.className = 'dk-reviews-content';
+    content.innerHTML = `<div style="padding:20px; text-align:center; line-height:1.6;">${message}</div>`;
+    
+    modal.appendChild(header);
+    modal.appendChild(content);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    overlay.querySelector('.dk-close-reviews').onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+}

@@ -25,9 +25,25 @@ export async function handleDigikalaReviews(port, query) {
         }
         
         // Retry Logic
-        if (!productId && apiKey) {
-             port.postMessage({ status: "progress", message: "تلاش مجدد با نام ساده‌تر..." });
-             const simplifiedName = await generateSimplifiedQuery(apiKey, query);
+        if (!productId) {
+             port.postMessage({ status: "progress", message: "تلاش مجدد..." });
+             
+             let simplifiedName = null;
+             if (apiKey) {
+                 simplifiedName = await generateSimplifiedQuery(apiKey, query);
+             } else {
+                 // Heuristic simplification for non-AI users
+                 // 1. Remove parentheses and their content
+                 let s = query.replace(/\([^)]*\)/g, '').replace(/[\[\{].*?[\]\}]/g, '');
+                 // 2. Remove "مدل" and following common stopwords if needed, or just keep first N words
+                 // Better: Split by space, take first 4-5 words which usually contain Brand + Model
+                 const words = s.trim().split(/\s+/);
+                 if (words.length > 4) {
+                     simplifiedName = words.slice(0, 4).join(' ');
+                 } else if (s !== query) {
+                     simplifiedName = s.trim();
+                 }
+             }
              
              if (simplifiedName && simplifiedName !== query) {
                  console.log("Retrying Digikala search with:", simplifiedName);
