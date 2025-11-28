@@ -261,41 +261,59 @@ function createReviewsButton(targetBtn, productTitle) {
             return;
         }
         
-        const port = chrome.runtime.connect({name: "rightpick_stream"});
-        
-        port.onMessage.addListener((msg) => {
-            if (msg.status === "progress") {
-                btn.innerText = "⏳ " + msg.message;
-            } else if (msg.status === "complete") {
-                btn.innerText = "مشاهده نظرات دیجی‌کالا";
-                const response = msg.data;
-                if (!response || response.error) {
-                    alert(response ? response.error : "Error receiving data");
-                } else {
-                    showReviewsModal(response.reviews, response.product);
-                }
-                port.disconnect();
-            } else if (msg.status === "error") {
-                 const originalText = btn.innerText;
-                 btn.innerText = "❌ یافت نشد";
-                 btn.style.backgroundColor = "#f44336"; // Red
-                 
-                 // Show Modal for better visibility
-                 showErrorModal(msg.error);
-                 
-                 setTimeout(() => {
-                     btn.innerText = "مشاهده نظرات دیجی‌کالا";
-                     btn.style.backgroundColor = "#8e24aa"; // Revert
-                 }, 3000);
-                 
-                 port.disconnect();
+        try {
+            // Check if extension context is valid
+            if (!chrome.runtime?.id) {
+                throw new Error("Extension context invalidated");
             }
-        });
 
-        port.postMessage({
-            action: "searchDigikalaAndGetReviews",
-            query: liveTitle
-        });
+            const port = chrome.runtime.connect({name: "rightpick_stream"});
+            
+            port.onDisconnect.addListener(() => {
+                if (chrome.runtime.lastError) {
+                    console.error('DK Extension: Port disconnected due to error:', chrome.runtime.lastError.message);
+                    alert('ارتباط با افزونه قطع شد. لطفاً صفحه را رفرش کنید.');
+                }
+            });
+
+            port.onMessage.addListener((msg) => {
+                if (msg.status === "progress") {
+                    btn.innerText = "⏳ " + msg.message;
+                } else if (msg.status === "complete") {
+                    btn.innerText = "مشاهده نظرات دیجی‌کالا";
+                    const response = msg.data;
+                    if (!response || response.error) {
+                        alert(response ? response.error : "Error receiving data");
+                    } else {
+                        showReviewsModal(response.reviews, response.product);
+                    }
+                    port.disconnect();
+                } else if (msg.status === "error") {
+                     const originalText = btn.innerText;
+                     btn.innerText = "❌ یافت نشد";
+                     btn.style.backgroundColor = "#f44336"; // Red
+                     
+                     // Show Modal for better visibility
+                     showErrorModal(msg.error);
+                     
+                     setTimeout(() => {
+                         btn.innerText = "مشاهده نظرات دیجی‌کالا";
+                         btn.style.backgroundColor = "#8e24aa"; // Revert
+                     }, 3000);
+                     
+                     port.disconnect();
+                }
+            });
+
+            port.postMessage({
+                action: "searchDigikalaAndGetReviews",
+                query: liveTitle
+            });
+            
+        } catch (err) {
+            console.error('DK Extension: Connection error:', err);
+            alert('خطا در ارتباط با افزونه. لطفاً صفحه را یکبار رفرش کنید (F5).');
+        }
     };
     
     // Insertion Logic

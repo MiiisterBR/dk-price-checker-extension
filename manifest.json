@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "RightPick",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A smart shopping assistant that checks product prices on Digikala and shows real Digikala user reviews while you browse on Torob and Esam helping you make the best possible choice.",
   "default_locale": "fa",
   "browser_specific_settings": {
@@ -24,6 +24,7 @@
     "open_in_tab": true
   },
   "background": {
+    "service_worker": "src/background/background.js",
     "scripts": ["src/background/background.js"],
     "type": "module"
   },
