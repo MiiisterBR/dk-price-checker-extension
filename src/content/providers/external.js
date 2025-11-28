@@ -20,19 +20,29 @@ export function initExternalSite() {
         if (!isProductPage) return;
 
         // Generate Fingerprint
-        // Check Title and URL as requested
-        const title = document.querySelector('h1') ? document.querySelector('h1').innerText : '';
+        // Check Title and URL as requested - use Torob's specific h1 location if available
+        const titleEl = document.querySelector('[class*="Showcase_name"] h1') || 
+                        document.querySelector('h1');
+        const title = titleEl ? titleEl.innerText : '';
         const url = window.location.href;
         
         const currentFingerprint = title + '|' + url;
 
         if (currentFingerprint !== lastFingerprint) {
-            console.log('DK Extension: Page Fingerprint Changed!', currentFingerprint);
             lastFingerprint = currentFingerprint;
+            
+            // Clean up ALL old buttons and flags when page changes
+            const oldButtons = document.querySelectorAll('.dk-reviews-btn');
+            oldButtons.forEach(btn => btn.remove());
+            
+            // Reset all target button flags
+            const allTargets = document.querySelectorAll('[data-dk-review-btn-added]');
+            allTargets.forEach(target => delete target.dataset.dkReviewBtnAdded);
             
             // Wait briefly for DOM to settle then check/inject
             setTimeout(handleExternalSiteChanges, 500);
             setTimeout(handleExternalSiteChanges, 1500);
+            setTimeout(handleExternalSiteChanges, 2500);
         } else {
             // Even if fingerprint is same, ensure button exists (backup)
             // But don't run full logic if not needed to save resources
@@ -71,56 +81,55 @@ function handleExternalSiteChanges() {
     if (hostname.includes('esam.ir') && !path.includes('/item/')) return;
     if (hostname.includes('torob.com') && !path.includes('/p/')) return;
 
-    const titleEl = document.querySelector('h1');
+    // Try to find h1 in Torob's specific showcase container first, then fallback to generic h1
+    let titleEl = document.querySelector('[class*="Showcase_name"] h1') || 
+                  document.querySelector('h1');
+    
     if (!titleEl) return;
 
     const currentTitle = titleEl.innerText.trim();
 
-    // Check if button ALREADY exists
+    // Check if button ALREADY exists for THIS product
     const existingBtn = document.querySelector('.dk-reviews-btn');
     if (existingBtn) {
-        // If button exists, check if it matches the current product
-        // We store the title on the button dataset to verify
-        if (existingBtn.dataset.productTitle === currentTitle) {
-            return; // Already there and correct
+        // CRITICAL FIX: Validate based on URL, not just title.
+        // Title in DOM might lag behind in SPA, but URL is always fresh.
+        const btnUrl = existingBtn.dataset.pageUrl;
+        const currentUrl = window.location.href;
+        
+        // Fuzzy match URL (ignore query params or hash if needed, but exact match is safest for now)
+        // We use 'includes' for path to be safe against tracking params
+        const isSamePage = btnUrl && currentUrl.includes(btnUrl.split('?')[0]);
+
+        if (isSamePage && existingBtn.dataset.productTitle === currentTitle) {
+            return; // Already correctly injected for this exact page
         } else {
-            // Title mismatch! This means we navigated to a new product but the button persisted (SPA reuse)
-            console.log('DK Extension: Product changed (Title mismatch), removing old button.');
+            // URL or Title mismatch! This is a stale button from previous page.
             existingBtn.remove();
-            // Also need to clear the dataset on the target button if it's being reused
-            const prevTarget = findExternalTargetButton();
-            if (prevTarget) delete prevTarget.dataset.dkReviewBtnAdded;
+            // Find and reset the target button that had the old button
+            const allTargets = document.querySelectorAll('[data-dk-review-btn-added]');
+            allTargets.forEach(t => delete t.dataset.dkReviewBtnAdded);
         }
     }
 
+    // Find target button
     const targetBtn = findExternalTargetButton();
-    
-    if (targetBtn) {
-        // If target says it's added, but the button isn't there (and not caught by existingBtn check above),
-        // it means the SPA wiped the review button but kept the target button instance (or copied it).
-        // We verify if the review button is actually nearby.
-        if (targetBtn.dataset.dkReviewBtnAdded && !existingBtn) {
-             // Check siblings/children/parent to be sure
-             const nearbyBtn = targetBtn.parentNode.querySelector('.dk-reviews-btn') || 
-                               (targetBtn.nextElementSibling && targetBtn.nextElementSibling.classList.contains('dk-reviews-btn') ? targetBtn.nextElementSibling : null);
-             
-             if (!nearbyBtn) {
-                  console.log('DK Extension: Target marked as processed but button missing. Resetting.');
-                  delete targetBtn.dataset.dkReviewBtnAdded;
-             }
-        }
-
-        // Double check to ensure we don't add multiple times
-        if (!targetBtn.dataset.dkReviewBtnAdded) {
-             console.log('DK Extension: Found target, injecting button for', currentTitle);
-             createReviewsButton(targetBtn, currentTitle);
-        } else if (existingBtn && existingBtn.dataset.productTitle !== currentTitle) {
-             // Edge case: Target marked as added, but button was removed above due to title mismatch
-             // We need to re-add.
-             console.log('DK Extension: Re-injecting button for new product title');
-             createReviewsButton(targetBtn, currentTitle);
-        }
+    if (!targetBtn) {
+        return;
     }
+
+    // If target already marked as processed, check if button actually exists
+    if (targetBtn.dataset.dkReviewBtnAdded) {
+        const nearbyBtn = document.querySelector('.dk-reviews-btn');
+        if (nearbyBtn && nearbyBtn.dataset.productTitle === currentTitle) {
+            return; // Already correctly processed
+        }
+        // Button missing or wrong, reset flag
+        delete targetBtn.dataset.dkReviewBtnAdded;
+    }
+
+    // Inject new button
+    createReviewsButton(targetBtn, currentTitle);
 }
 
 function findExternalTargetButton() {
@@ -131,6 +140,10 @@ function findExternalTargetButton() {
     const found = candidates.find(b => {
         // Must be visible (basic check)
         if (b.offsetWidth === 0 && b.offsetHeight === 0) return false;
+        
+        // Additional visibility check
+        const style = window.getComputedStyle(b);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
 
         const text = b.innerText.trim();
         if (!text) return false;
@@ -174,13 +187,20 @@ function createReviewsButton(targetBtn, productTitle) {
     if (targetBtn.dataset.dkReviewBtnAdded) return;
     if (targetBtn.nextElementSibling && targetBtn.nextElementSibling.className === 'dk-reviews-btn') return;
     
+    // IMPORTANT: Re-read title from DOM to ensure we have the latest title
+    // This is critical for SPA navigation where DOM might update after initial call
+    const titleEl = document.querySelector('[class*="Showcase_name"] h1') || 
+                     document.querySelector('h1');
+    const currentProductTitle = titleEl ? titleEl.innerText.trim() : productTitle;
+    
     // Mark target as processed
     targetBtn.dataset.dkReviewBtnAdded = 'true';
 
     const btn = document.createElement('div');
     btn.className = 'dk-reviews-btn';
     btn.innerText = "مشاهده نظرات دیجی‌کالا";
-    btn.dataset.productTitle = productTitle; // Store title for SPA validation
+    btn.dataset.productTitle = currentProductTitle; // Store title for SPA validation
+    btn.dataset.pageUrl = window.location.href; // Store URL for SPA validation (CRITICAL)
     
     // Style it - moved to CSS as much as possible, but some specific overrides remain
     btn.style.marginTop = '12px';
@@ -200,6 +220,46 @@ function createReviewsButton(targetBtn, productTitle) {
     btn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation(); 
+        
+        let liveTitle = '';
+        
+        // Strategy 1: Extract from URL (Torob specific) - HIGHEST PRIORITY for SPA
+        // The DOM h1 often lags behind in Torob's SPA, but URL is instant and accurate.
+        if (window.location.hostname.includes('torob.com')) {
+            try {
+                const pathParts = window.location.pathname.split('/');
+                // Usually the name is the last part or second to last if ends with slash
+                let urlName = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+                if (urlName && urlName.length > 2 && !urlName.startsWith('p_')) {
+                    urlName = decodeURIComponent(urlName).replace(/-/g, ' ');
+                    liveTitle = urlName;
+                }
+            } catch (e) {
+                // Silent catch
+            }
+        }
+        
+        // Strategy 2: Torob Showcase (only if URL failed)
+        if (!liveTitle) {
+            const s1 = document.querySelector('[class*="Showcase_name"] h1');
+            if (s1) liveTitle = s1.innerText.trim();
+        }
+        
+        // Strategy 3: Generic H1
+        if (!liveTitle) {
+            const s2 = document.querySelector('h1');
+            if (s2) liveTitle = s2.innerText.trim();
+        }
+
+        // Strategy 4: Fallback to title attribute
+        if (!liveTitle && document.title) {
+             liveTitle = document.title.replace('| ترب', '').trim();
+        }
+
+        if (!liveTitle) {
+            alert('خطا: عنوان محصول در صفحه پیدا نشد. لطفاً صفحه را رفرش کنید.');
+            return;
+        }
         
         const port = chrome.runtime.connect({name: "rightpick_stream"});
         
@@ -234,7 +294,7 @@ function createReviewsButton(targetBtn, productTitle) {
 
         port.postMessage({
             action: "searchDigikalaAndGetReviews",
-            query: productTitle
+            query: liveTitle
         });
     };
     
