@@ -27,17 +27,17 @@ A browser extension that helps users verify Digikala product prices across other
 ## Installation
 
 ### Chrome (Developer Mode)
-1. Download or clone this repository.
-2. Open Chrome and go to `chrome://extensions`.
-3. Enable **Developer mode** (top right).
-4. Click **Load unpacked**.
-5. Select the folder containing `manifest.json`.
+1. Clone or download this repository to your local machine.
+2. Open Google Chrome and navigate to `chrome://extensions`.
+3. Toggle on **Developer mode** in the top right corner.
+4. Click on the **Load unpacked** button.
+5. Select the root directory of this project (the folder containing `manifest.json`).
 
-### Firefox (Temporary Add-on)
-1. Download or clone this repository.
-2. Open Firefox and go to `about:debugging#/runtime/this-firefox`.
-3. Click **Load Temporary Add-on...**.
-4. Select the `manifest.json` file.
+### Firefox (Developer Mode)
+1. Clone or download this repository.
+2. Open Firefox and enter `about:debugging#/runtime/this-firefox` in the address bar.
+3. Click on **Load Temporary Add-on...**.
+4. Browse to the project directory and select the `manifest.json` file.
 
 ## Build Instructions
 
