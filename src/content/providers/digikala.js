@@ -49,24 +49,18 @@ function createButton(targetBtn) {
   btn.style.width = targetStyle.width === 'auto' ? '100%' : targetStyle.width; 
   
   if (targetBtn.parentNode) {
+    // Always insert after the target button without moving it.
+    // This prevents conflicts with React's virtual DOM.
     const parent = targetBtn.parentNode;
     const computedStyle = window.getComputedStyle(parent);
     
-    if (computedStyle.display === 'flex' && (computedStyle.flexDirection === 'column' || computedStyle.flexDirection === 'column-reverse')) {
-       targetBtn.insertAdjacentElement('afterend', btn);
-    } else {
-       const wrapper = document.createElement('div');
-       wrapper.style.display = 'flex';
-       wrapper.style.flexDirection = 'column';
-       wrapper.style.gap = '12px';
-       wrapper.style.width = '100%';
-       
-       parent.insertBefore(wrapper, targetBtn);
-       wrapper.appendChild(targetBtn);
-       wrapper.appendChild(btn);
-       
-       btn.style.marginTop = '0';
+    // If parent is flex row, enable wrapping so our button goes to new line
+    if (computedStyle.display === 'flex' && computedStyle.flexDirection === 'row') {
+      parent.style.flexWrap = 'wrap';
     }
+    
+    targetBtn.insertAdjacentElement('afterend', btn);
+    btn.style.marginTop = '12px';
   }
   
   btn.addEventListener('click', (e) => {

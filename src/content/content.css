@@ -5,7 +5,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%; /* Will be overridden by JS if needed, but 100% is usually safe */
+  width: 100% !important; /* Force full width */
+  flex-basis: 100% !important; /* Force new line in flex container */
+  flex-shrink: 0 !important;
   background-color: #8e24aa !important; /* Purple - Force override */
   color: white;
   font-size: 1.2rem; /* Adjusted to match DK button visual */
